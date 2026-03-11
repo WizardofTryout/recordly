@@ -17,6 +17,7 @@ const SHORTCUTS_FILE = path.join(app.getPath('userData'), 'shortcuts.json')
 const AUTO_RECORDING_PREFIX = 'recording-'
 const AUTO_RECORDING_RETENTION_COUNT = 20
 const AUTO_RECORDING_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000
+const ALLOW_RECORDLY_WINDOW_CAPTURE = Boolean(process.env['VITE_DEV_SERVER_URL'])
 
 function getScreen() {
   return nodeRequire('electron').screen as typeof import('electron').screen
@@ -1201,6 +1202,7 @@ export function registerIpcHandlers(
         .map((name) => normalizeDesktopSourceName(name))
         .filter(Boolean)
     )
+      const ownAppName = normalizeDesktopSourceName(app.getName())
 
     const screenSources = electronSources
       .filter((source) => source.id.startsWith('screen:'))
@@ -1219,6 +1221,10 @@ export function registerIpcHandlers(
         .filter((source) => {
           const normalizedName = normalizeDesktopSourceName(source.name)
           if (!normalizedName) {
+            return true
+          }
+
+          if (ALLOW_RECORDLY_WINDOW_CAPTURE && normalizedName.includes('recordly')) {
             return true
           }
 
@@ -1255,8 +1261,12 @@ export function registerIpcHandlers(
           const normalizedWindowName = normalizeDesktopSourceName(source.windowTitle ?? source.name)
           const normalizedAppName = normalizeDesktopSourceName(source.appName ?? '')
 
-          if (normalizedAppName && normalizedAppName === normalizeDesktopSourceName(app.getName())) {
+          if (!ALLOW_RECORDLY_WINDOW_CAPTURE && normalizedAppName && normalizedAppName === ownAppName) {
             return false
+          }
+
+          if (ALLOW_RECORDLY_WINDOW_CAPTURE && (normalizedAppName === 'recordly' || normalizedWindowName?.includes('recordly'))) {
+            return true
           }
 
           if (!normalizedWindowName) {
@@ -1296,6 +1306,10 @@ export function registerIpcHandlers(
         .filter((source) => {
           const normalizedName = normalizeDesktopSourceName(source.name)
           if (!normalizedName) {
+            return true
+          }
+
+          if (ALLOW_RECORDLY_WINDOW_CAPTURE && normalizedName.includes('recordly')) {
             return true
           }
 
@@ -1375,6 +1389,8 @@ export function registerIpcHandlers(
       const appName = normalizeDesktopSourceName(String(source?.appName ?? ''))
       const ownAppName = normalizeDesktopSourceName(app.getName())
       if (
+        !ALLOW_RECORDLY_WINDOW_CAPTURE
+        &&
         source?.id?.startsWith('window:')
         && appName
         && (appName === ownAppName || appName === 'recordly')

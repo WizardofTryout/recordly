@@ -2,6 +2,7 @@ import { Application, Container, Sprite, Graphics, BlurFilter, Texture } from 'p
 import { MotionBlurFilter } from 'pixi-filters/motion-blur';
 import type { ZoomRegion, CropRegion, AnnotationRegion, SpeedRegion, CursorTelemetryPoint } from '@/components/video-editor/types';
 import { ZOOM_DEPTH_SCALES } from '@/components/video-editor/types';
+import { getRenderableAssetUrl } from '@/lib/assetPath';
 import { findDominantRegion } from '@/components/video-editor/videoPlayback/zoomRegionUtils';
 import { applyZoomTransform, computeFocusFromTransform, computeZoomTransform, createMotionBlurState, type MotionBlurState } from '@/components/video-editor/videoPlayback/zoomTransform';
 import { DEFAULT_FOCUS, ZOOM_SCALE_DEADZONE, ZOOM_TRANSLATION_DEADZONE_PX } from '@/components/video-editor/videoPlayback/constants';
@@ -184,7 +185,7 @@ export class FrameRenderer {
   }
 
   private async setupBackground(): Promise<void> {
-    const wallpaper = this.config.wallpaper;
+    const wallpaper = await this.resolveWallpaperForExport(this.config.wallpaper);
 
     // Create background canvas for separate rendering (not affected by zoom)
     const bgCanvas = document.createElement('canvas');
@@ -298,6 +299,27 @@ export class FrameRenderer {
 
     // Store the background canvas for compositing
     this.backgroundSprite = bgCanvas as any;
+  }
+
+  private async resolveWallpaperForExport(wallpaper: string): Promise<string> {
+    if (!wallpaper) {
+      return wallpaper;
+    }
+
+    if (wallpaper.startsWith('#') || wallpaper.startsWith('linear-gradient') || wallpaper.startsWith('radial-gradient')) {
+      return wallpaper;
+    }
+
+    const looksLikeAbsoluteFilePath = wallpaper.startsWith('/')
+      && !wallpaper.startsWith('//')
+      && !wallpaper.startsWith('/wallpapers/')
+      && !wallpaper.startsWith('/app-icons/');
+
+    const wallpaperAsset = looksLikeAbsoluteFilePath
+      ? `file://${encodeURI(wallpaper)}`
+      : wallpaper;
+
+    return getRenderableAssetUrl(wallpaperAsset);
   }
 
   async renderFrame(videoFrame: VideoFrame, timestamp: number): Promise<void> {

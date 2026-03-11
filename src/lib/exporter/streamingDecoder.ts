@@ -291,9 +291,9 @@ export class StreamingVideoDecoder {
 
   /**
    * Resample buffered frames to fill the target frame count for this segment.
-   * Handles VFR sources by duplicating/decimating as needed.
-   * Uses interpolated source timestamps so animations advance smoothly
-   * even when multiple export frames map to the same source frame.
+    * Handles VFR sources by duplicating/decimating as needed.
+    * Choose the source frame by target source time so the picture and overlays
+    * are both driven from the same display timeline.
    */
   private async deliverSegment(
     frames: VideoFrame[],
@@ -312,21 +312,45 @@ export class StreamingVideoDecoder {
     let exportFrameIndex = startExportFrameIndex;
 
     for (let i = 0; i < segmentFrameCount && !this.cancelled; i++) {
-      const sourceIdx = Math.min(
-        Math.floor(i * frames.length / segmentFrameCount),
-        frames.length - 1
-      );
+      const progress = segmentFrameCount > 1 ? i / segmentFrameCount : 0;
+      const targetSourceTimeMs = (segment.startSec + progress * segmentDuration) * 1000;
+      const sourceIdx = this.findSourceFrameIndexForTime(frames, targetSourceTimeMs * 1000);
       const sourceFrame = frames[sourceIdx];
-      // Compute a uniformly-spaced source timestamp so zoom/cursor animations
-      // progress smoothly instead of stalling on duplicate VFR timestamps
-      const t = segmentFrameCount > 1 ? i / segmentFrameCount : 0;
-      const interpolatedSourceTimeMs = (segment.startSec + t * segmentDuration) * 1000;
       const clone = new VideoFrame(sourceFrame, { timestamp: sourceFrame.timestamp });
-      await onFrame(clone, exportFrameIndex * frameDurationUs, interpolatedSourceTimeMs);
+      await onFrame(clone, exportFrameIndex * frameDurationUs, targetSourceTimeMs);
       exportFrameIndex++;
     }
 
     return exportFrameIndex;
+  }
+
+  private findSourceFrameIndexForTime(frames: VideoFrame[], targetTimestampUs: number): number {
+    if (frames.length <= 1) {
+      return 0;
+    }
+
+    if (targetTimestampUs <= frames[0].timestamp) {
+      return 0;
+    }
+
+    const lastIndex = frames.length - 1;
+    if (targetTimestampUs >= frames[lastIndex].timestamp) {
+      return lastIndex;
+    }
+
+    let lo = 0;
+    let hi = lastIndex;
+
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (frames[mid].timestamp <= targetTimestampUs) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    return lo;
   }
 
   private computeSegments(
