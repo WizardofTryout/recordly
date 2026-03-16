@@ -82,37 +82,6 @@ function isSupportedLocale(locale: string): locale is AppLocale {
   return SUPPORTED_LOCALES.includes(locale as AppLocale)
 }
 
-function normalizeLocale(locale: string | null | undefined): AppLocale {
-  if (!locale) {
-    return DEFAULT_LOCALE
-  }
-
-  // Exact match first (e.g. "zh-CN")
-  if (isSupportedLocale(locale)) return locale
-
-  // Canonicalize case (e.g. "zh-cn" → "zh-CN")
-  const canonical = SUPPORTED_LOCALES.find(
-    (l) => l.toLowerCase() === locale.toLowerCase(),
-  )
-  if (canonical) return canonical
-
-  // Handle extended subtags like "zh-Hans-CN" → try "zh-CN"
-  const parts = locale.split('-')
-  if (parts.length >= 3) {
-    const langRegion = `${parts[0]}-${parts[parts.length - 1]}`
-    if (isSupportedLocale(langRegion)) {
-      return langRegion
-    }
-  }
-
-  // Language-only fallback (e.g. "zh" matches "zh-CN")
-  const lang = parts[0].toLowerCase()
-  const byLang = SUPPORTED_LOCALES.find((l) => l.split('-')[0].toLowerCase() === lang)
-  if (byLang) return byLang
-
-  return DEFAULT_LOCALE
-}
-
 function getInitialLocale(): AppLocale {
   if (typeof window === 'undefined') {
     return DEFAULT_LOCALE
