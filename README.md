@@ -44,6 +44,18 @@ On Windows, builds older than 19041 fall back to Electron capture and the cursor
 
 # Features
 
+### Cursor Animations
+<p>
+  <img src="./CursorSwayDemo.gif" width="450" alt="Recordly sway demo video">
+</p>
+
+- Adjustable cursor size
+- Cursor smoothing
+- Motion blur
+- Click bounce animation
+- macOS-style cursor assets
+- Cursor sway effects
+
 ### Recording
 
 - Record an entire screen or a single window
@@ -60,17 +72,9 @@ On Windows, builds older than 19041 fall back to Electron capture and the cursor
 - Manual zoom regions
 - Smooth pan transitions between zoom regions
 
-### Cursor Controls
-
-- Adjustable cursor size
-- Cursor smoothing
-- Motion blur
-- Click bounce animation
-- macOS-style cursor assets
-
 ### Infinite Loops
 <p>
-  <img src="./CursorLoop.gif" width="450" alt="Recordly demo video">
+  <img src="./CursorLoop.gif" width="450" alt="Recordly gif loop demo video">
 </p>
 
 - Toggle to make cursor return to original position at end of video/GIF for clean loops
